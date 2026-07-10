@@ -360,6 +360,7 @@
         <file>PrecisionStrike.qml</file>
         <file>PrecisionStrikeTest.qml</file>
         <file>SwarmOperationPopup.qml</file>
+        <file alias="RadarBridge.qml">src/RadarBridge/RadarBridge.qml</file>
         <file alias="MavlinkTestPage.qml">src/AnalyzeView/MAVLinkTestPage.qml</file>
         <file alias="swarm.qml">src/AnalyzeView/swarm.qml</file>
     </qresource>

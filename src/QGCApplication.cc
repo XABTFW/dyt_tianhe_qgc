@@ -56,6 +56,9 @@
 #include "MAVLinkProtocol.h"
 #include "MissionManager.h"
 #include "MultiVehicleManager.h"
+#if !defined(QGC_NO_SERIAL_LINK) && !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+#include "RadarBridgeManager.h"
+#endif
 #include "ParameterManager.h"
 #include "PositionManager.h"
 #include "QGCCameraManager.h"
@@ -286,6 +289,9 @@ void QGCApplication::init()
     MissionManager::registerQmlTypes();
     QGCCameraManager::registerQmlTypes();
     MultiVehicleManager::registerQmlTypes();
+#if !defined(QGC_NO_SERIAL_LINK) && !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+    RadarBridgeManager::registerQmlTypes();
+#endif
     QGCPositionManager::registerQmlTypes();
     SettingsManager::registerQmlTypes();
     VideoManager::registerQmlTypes();
@@ -370,6 +376,9 @@ void QGCApplication::_initForNormalAppBoot()
     QGCPositionManager::instance()->init();
     LinkManager::instance()->init();
     MultiVehicleManager::instance()->init();
+#if !defined(QGC_NO_SERIAL_LINK) && !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+    RadarBridgeManager::instance()->init();
+#endif
     MAVLinkProtocol::instance()->init();
     VideoManager::instance()->init();
 

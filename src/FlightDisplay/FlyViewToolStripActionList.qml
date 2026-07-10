@@ -60,6 +60,18 @@ ToolStripActionList {
             }
         },
         ToolStripAction {
+            text:           qsTr("Radar Bridge")
+            iconSource:     "/qmlimages/Gps.svg"
+
+            onTriggered:{
+                if (radarBridgeWindow) {
+                    radarBridgeWindow.openWindow()
+                } else {
+                    console.log("Radar Bridge 窗口未加载")
+                }
+            }
+        },
+        ToolStripAction {
             text:           qsTr("定点打击")
             iconSource:     "/InstrumentValueIcons/target.svg"
             visible:        false

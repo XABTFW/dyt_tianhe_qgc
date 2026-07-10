@@ -819,6 +819,17 @@ ApplicationWindow {
         onMessage:yilongdeswarmloader.item.show()
     }
 
+    // Radar Bridge popup window (loaded lazily, shown from the tool strip
+    // button placed under the swarm button).
+    Loader {
+        id:           radarBridgeLoader
+        source:       "qrc:/qml/RadarBridge.qml"
+        active:       true
+        asynchronous: true
+    }
+    // Exposed so FlyViewToolStripActionList can call radarBridgeWindow.openWindow()
+    property var radarBridgeWindow: radarBridgeLoader.item
+
     // 定点打击窗口
     Loader {
         id: precisionStrikeLoader
