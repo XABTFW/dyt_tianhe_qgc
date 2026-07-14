@@ -64,6 +64,50 @@ def build_position(seq: int, t_ms: int, lat_deg: float, lon_deg: float, alt_m: f
     return bytes([SOF]) + crc_region + struct.pack("<H", crc)
 
 
+def meters_to_lat_lon(base_lat_deg: float, base_lon_deg: float, north_m: float, east_m: float):
+    # Good enough for short test tracks: convert local N/E metres to WGS84 deg.
+    metres_per_deg_lat = 111_320.0
+    metres_per_deg_lon = metres_per_deg_lat * math.cos(math.radians(base_lat_deg))
+    return (base_lat_deg + north_m / metres_per_deg_lat,
+            base_lon_deg + east_m / metres_per_deg_lon)
+
+
+def square_track(t_s: float, base_lat_deg: float, base_lon_deg: float, base_alt_m: float,
+                 side_m: float, speed_m_s: float, altitude_step_m: float):
+    side_m = max(1.0, side_m)
+    speed_m_s = max(0.1, speed_m_s)
+    leg_s = side_m / speed_m_s
+    cycle_s = 4.0 * leg_s
+    cycle_index = int(t_s / cycle_s)
+    cycle_t = t_s - cycle_index * cycle_s
+    leg_index = min(3, int(cycle_t / leg_s))
+    leg_t = cycle_t - leg_index * leg_s
+    u = max(0.0, min(1.0, leg_t / leg_s))
+
+    half = side_m * 0.5
+    corners = [
+        (-half, -half),
+        ( half, -half),
+        ( half,  half),
+        (-half,  half),
+    ]
+    start_n, start_e = corners[leg_index]
+    end_n, end_e = corners[(leg_index + 1) % 4]
+    north_m = start_n + (end_n - start_n) * u
+    east_m = start_e + (end_e - start_e) * u
+
+    altitude_phase = cycle_index % 3
+    if altitude_phase == 0:
+        alt_m = base_alt_m
+    elif altitude_phase == 1:
+        alt_m = base_alt_m + altitude_step_m
+    else:
+        alt_m = base_alt_m
+
+    lat, lon = meters_to_lat_lon(base_lat_deg, base_lon_deg, north_m, east_m)
+    return lat, lon, alt_m, cycle_index, leg_index
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", help="serial port, e.g. /dev/ttyUSB0 or COM3")
@@ -76,6 +120,20 @@ def main():
     ap.add_argument("--corrupt", type=int, default=0, metavar="N",
                     help="corrupt 1 byte of every Nth frame to prove CRC rejection "
                          "(CRC Errors should climb, no bad data should appear). 0=off")
+    ap.add_argument("--base-lat", type=float, default=47.397972,
+                    help="square-track centre latitude in degrees")
+    ap.add_argument("--base-lon", type=float, default=8.546164,
+                    help="square-track centre longitude in degrees")
+    ap.add_argument("--base-alt", type=float, default=3.0,
+                    help="square-track base altitude in metres")
+    ap.add_argument("--side-m", type=float, default=40.0,
+                    help="square-track side length in metres")
+    ap.add_argument("--speed", type=float, default=5.0,
+                    help="target speed along square edges in m/s")
+    ap.add_argument("--alt-step", type=float, default=10.0,
+                    help="altitude change after each square lap in metres")
+    ap.add_argument("--print-every", type=int, default=10,
+                    help="print one decoded target line every N frames; 0 disables")
     args = ap.parse_args()
 
     # Fixed, easy-to-verify constants used by --fixed mode.
@@ -128,10 +186,17 @@ def main():
             lat, lon, alt = FIXED_LAT, FIXED_LON, FIXED_ALT
             dists = FIXED_DISTS
         else:
-            # A moving position around a base point.
-            lat = 47.397742 + 0.00001 * math.sin(t_ms / 1000.0)
-            lon = 8.545594 + 0.00001 * math.cos(t_ms / 1000.0)
-            alt = 500.0 + 5.0 * math.sin(t_ms / 2000.0)
+            # Fly a square in WGS84. After each square lap, alternate between
+            # base altitude and base+alt_step so the target climbs 10 m for one
+            # square, descends 10 m for the next, and repeats.
+            lat, lon, alt, cycle_index, leg_index = square_track(
+                t_ms / 1000.0,
+                args.base_lat,
+                args.base_lon,
+                args.base_alt,
+                args.side_m,
+                args.speed,
+                args.alt_step)
             # A 40-point scan with a sweeping near obstacle.
             dists = [800 + int(300 * math.sin((i + t_ms / 200.0) / 5.0)) for i in range(40)]
 
@@ -148,6 +213,10 @@ def main():
             print("POSITION ", pos.hex())
         else:
             ser.write(pos)
+
+        if args.print_every > 0 and frame_no % args.print_every == 0:
+            print(f"target lat={lat:.7f} lon={lon:.7f} alt={alt:.1f}m "
+                  f"lap={locals().get('cycle_index', 0)} leg={locals().get('leg_index', 0)}")
 
         time.sleep(period)
 

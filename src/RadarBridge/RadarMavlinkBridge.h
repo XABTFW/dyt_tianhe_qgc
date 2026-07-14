@@ -7,7 +7,7 @@
  * connection to the flight controller: it reuses the active Vehicle and its
  * primary LinkInterface, exactly like RTCMMavlink / MissionManager do.
  *
- *   POSITION       -> GPS_INPUT        (primary; can also emit GLOBAL_POSITION_INT)
+ *   POSITION       -> UAV_INFO         (radar target for PX4 cooperative rendezvous)
  *   RADAR_SCAN_2D  -> OBSTACLE_DISTANCE (72-point array, downsample/pad as needed)
  *
  ****************************************************************************/
@@ -31,6 +31,10 @@ public:
     /// @return true if a message was actually sent.
     bool sendPositionAsGpsInput(const RadarProtocol::PositionData &pos);
 
+    /// Send a POSITION as a MAVLink UAV_INFO target. PX4 converts this custom
+    /// message into follower_info, which cooperative_rendezvous can track.
+    bool sendPositionAsUavInfo(const RadarProtocol::PositionData &pos);
+
     /// Optional: also send the position as GLOBAL_POSITION_INT so it shows up
     /// on the QGC map. NOTE: GLOBAL_POSITION_INT conventionally represents the
     /// *vehicle's own* fused position, so PX4/QGC may treat it as the drone's
@@ -49,4 +53,7 @@ signals:
 private:
     // Resolve the active vehicle + its primary link. Returns nullptr if none.
     Vehicle *_activeVehicle() const;
+
+    RadarProtocol::PositionData _previousUavPosition;
+    bool _havePreviousUavPosition = false;
 };

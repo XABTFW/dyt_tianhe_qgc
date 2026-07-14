@@ -83,6 +83,86 @@ bool RadarMavlinkBridge::sendPositionAsGpsInput(const RadarProtocol::PositionDat
     return true;
 }
 
+bool RadarMavlinkBridge::sendPositionAsUavInfo(const RadarProtocol::PositionData &pos)
+{
+    if (!pos.valid) {
+        return false;
+    }
+
+    Vehicle *const vehicle = _activeVehicle();
+    if (!vehicle) {
+        return false;
+    }
+
+    const SharedLinkInterfacePtr sharedLink = vehicle->vehicleLinkManager()->primaryLink().lock();
+    if (!sharedLink) {
+        return false;
+    }
+
+    float vx = 0.0f;
+    float vy = 0.0f;
+    float vz = 0.0f;
+
+    if (_havePreviousUavPosition) {
+        const uint32_t dtMs = pos.timeMs - _previousUavPosition.timeMs;
+
+        if (dtMs >= 20U && dtMs <= 2000U) {
+            constexpr double earthRadiusM = 6371000.0;
+            constexpr double degToRad = M_PI / 180.0;
+            const double dt = static_cast<double>(dtMs) * 0.001;
+            const double lat0 = _previousUavPosition.latDeg() * degToRad;
+            const double lat1 = pos.latDeg() * degToRad;
+            const double dLat = lat1 - lat0;
+            const double dLon = (pos.lonDeg() - _previousUavPosition.lonDeg()) * degToRad;
+            const double north = dLat * earthRadiusM;
+            const double east = dLon * earthRadiusM * std::cos(0.5 * (lat0 + lat1));
+            const double down = _previousUavPosition.altM() - pos.altM();
+            const double horizontalSpeed = std::hypot(north, east) / dt;
+
+            // Reject discontinuities and malformed timestamps instead of feeding
+            // an unsafe velocity spike into PX4.
+            if (std::isfinite(horizontalSpeed) && horizontalSpeed <= 80.0) {
+                vx = static_cast<float>(north / dt);
+                vy = static_cast<float>(east / dt);
+            }
+
+            const double verticalSpeed = down / dt;
+            if (std::isfinite(verticalSpeed) && std::abs(verticalSpeed) <= 20.0) {
+                vz = static_cast<float>(verticalSpeed);
+            }
+        }
+    }
+
+    mavlink_message_t msg;
+    (void) mavlink_msg_uav_info_pack_chan(
+        MAVLinkProtocol::instance()->getSystemId(),
+        MAVLinkProtocol::getComponentId(),
+        sharedLink->mavlinkChannel(),
+        &msg,
+        99,                                      // mavid: default cooperative target id
+        0,                                      // group_id
+        0,                                      // is_leader=false -> PX4 publishes follower_info
+        static_cast<float>(pos.latDeg()),
+        static_cast<float>(pos.lonDeg()),
+        static_cast<float>(NAN),                // yaw unknown
+        static_cast<float>(NAN),                // yaw speed unknown
+        static_cast<float>(pos.altM()),
+        vx,
+        vy,
+        vz,
+        0);                                     // land flags
+
+    if (!vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg)) {
+        return false;
+    }
+
+    _previousUavPosition = pos;
+    _havePreviousUavPosition = true;
+
+    emit mavlinkMessageSent();
+    return true;
+}
+
 bool RadarMavlinkBridge::sendPositionAsGlobalPositionInt(const RadarProtocol::PositionData &pos)
 {
     if (!pos.valid) {

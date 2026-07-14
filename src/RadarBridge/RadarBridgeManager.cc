@@ -316,7 +316,7 @@ void RadarBridgeManager::_handlePosition(const QByteArray &payload, const QByteA
 
     // Master gate + per-type toggle + rate limit before forwarding to PX4.
     if (_sendingEnabled && sendPosition() && _rateAllows(_lastPositionSentMs)) {
-        _bridge->sendPositionAsGpsInput(pos);
+        _bridge->sendPositionAsUavInfo(pos);
         // Optional map display copy (see header note about GLOBAL_POSITION_INT):
         // _bridge->sendPositionAsGlobalPositionInt(pos);
     }
