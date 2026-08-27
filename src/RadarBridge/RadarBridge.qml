@@ -148,10 +148,21 @@ Window {
             // ---- 5 & 6. Message type toggles ----
             RowLayout {
                 Layout.fillWidth: true
-                QGCLabel { text: qsTr("Send POSITION to PX4 (GPS_INPUT)"); Layout.fillWidth: true }
+                QGCLabel { text: qsTr("Send radar target to PX4 (UAV_INFO)"); Layout.fillWidth: true }
                 QGCSwitch {
                     checked: RadarBridgeManager.sendPosition
                     onClicked: RadarBridgeManager.sendPosition = checked
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                QGCLabel { text: qsTr("Radar Target ID"); Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 22 }
+                QGCTextField {
+                    Layout.fillWidth: true
+                    text: RadarBridgeManager.targetId.toString()
+                    inputMethodHints: Qt.ImhDigitsOnly
+                    validator: IntValidator { bottom: 1; top: 2147483647 }
+                    onEditingFinished: RadarBridgeManager.targetId = Number(text)
                 }
             }
             RowLayout {

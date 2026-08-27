@@ -16,6 +16,7 @@ constexpr const char *kBaudRate       = "baudRate";
 constexpr const char *kSendPosition   = "sendPosition";
 constexpr const char *kSendRadarScan  = "sendRadarScan";
 constexpr const char *kSendRateHz     = "sendRateHz";
+constexpr const char *kTargetId       = "targetId";
 }
 
 RadarSettings::RadarSettings(QObject *parent)
@@ -34,6 +35,7 @@ void RadarSettings::_load()
     _sendPosition   = s.value(kSendPosition,   true).toBool();
     _sendRadarScan  = s.value(kSendRadarScan,  true).toBool();
     _sendRateHz     = s.value(kSendRateHz,     10).toInt();
+    _targetId       = qMax(1, s.value(kTargetId, 1).toInt());
     s.endGroup();
 }
 
@@ -47,6 +49,7 @@ void RadarSettings::_save()
     s.setValue(kSendPosition,   _sendPosition);
     s.setValue(kSendRadarScan,  _sendRadarScan);
     s.setValue(kSendRateHz,     _sendRateHz);
+    s.setValue(kTargetId,       _targetId);
     s.endGroup();
 }
 
@@ -97,6 +100,15 @@ void RadarSettings::setSendRateHz(int v)
     _sendRateHz = v;
     _save();
     emit sendRateHzChanged();
+}
+
+void RadarSettings::setTargetId(int v)
+{
+    v = qMax(1, v);
+    if (_targetId == v) return;
+    _targetId = v;
+    _save();
+    emit targetIdChanged();
 }
 
 // ---------------------------------------------------------------------------

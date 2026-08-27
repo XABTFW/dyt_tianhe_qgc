@@ -11,7 +11,6 @@
 #include "VehicleLinkManager.h"
 #include "LinkInterface.h"
 
-#include <QtCore/QDateTime>
 #include <algorithm>
 #include <cmath>
 
@@ -27,9 +26,14 @@ Vehicle *RadarMavlinkBridge::_activeVehicle() const
     return MultiVehicleManager::instance()->activeVehicle();
 }
 
-bool RadarMavlinkBridge::sendPositionAsGpsInput(const RadarProtocol::PositionData &pos)
+bool RadarMavlinkBridge::sendPositionAsUavInfo(const RadarProtocol::PositionData &pos, quint32 targetId)
 {
-    if (!pos.valid) {
+    const double lat = pos.latDeg();
+    const double lon = pos.lonDeg();
+    const double alt = pos.altM();
+
+    if (!pos.valid || targetId == 0 || !std::isfinite(lat) || !std::isfinite(lon) || !std::isfinite(alt)
+        || lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0 || alt < 0.0) {
         return false;
     }
 
@@ -44,36 +48,26 @@ bool RadarMavlinkBridge::sendPositionAsGpsInput(const RadarProtocol::PositionDat
         return false;
     }
 
-    // Build the GPS_INPUT payload.
-    mavlink_gps_input_t gps{};
-    gps.time_usec           = static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch()) * 1000ULL;
-    gps.gps_id              = 0;
-    gps.lat                 = pos.latE7;                    // degE7
-    gps.lon                 = pos.lonE7;                    // degE7
-    gps.alt                 = static_cast<float>(pos.altM()); // metres MSL
-    gps.fix_type            = 3;                            // 3D fix
-    gps.satellites_visible  = 10;                           // plausible value
-    gps.hdop                = 1.0f;
-    gps.vdop                = 1.0f;
-
-    // Tell PX4 which fields to ignore. We are not providing velocity, accuracy
-    // or GPS-time fields, so mark them ignored. Bit definitions come from the
-    // GPS_INPUT_IGNORE_FLAGS enum in the common dialect.
-    gps.ignore_flags =
-        GPS_INPUT_IGNORE_FLAG_VEL_HORIZ  |
-        GPS_INPUT_IGNORE_FLAG_VEL_VERT   |
-        GPS_INPUT_IGNORE_FLAG_SPEED_ACCURACY |
-        GPS_INPUT_IGNORE_FLAG_HORIZONTAL_ACCURACY |
-        GPS_INPUT_IGNORE_FLAG_VERTICAL_ACCURACY;
-
-    // Encode on the vehicle's mavlink channel and send over its link.
+    // is_leader=0 makes the custom PX4 receiver publish this sample as
+    // follower_info. The 26-byte radar protocol has no velocity or yaw fields.
     mavlink_message_t msg;
-    (void) mavlink_msg_gps_input_encode_chan(
+    (void) mavlink_msg_uav_info_pack_chan(
         MAVLinkProtocol::instance()->getSystemId(),
         MAVLinkProtocol::getComponentId(),
         sharedLink->mavlinkChannel(),
         &msg,
-        &gps);
+        targetId,
+        0, // group_id
+        0, // is_leader
+        static_cast<float>(lat),
+        static_cast<float>(lon),
+        0.0f, // yaw unknown
+        0.0f, // yaw speed unknown
+        static_cast<float>(alt), // radar height AGL
+        0.0f, // vx unknown
+        0.0f, // vy unknown
+        0.0f, // vz unknown
+        0);   // land/at_target flags
 
     if (!vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg)) {
         return false;

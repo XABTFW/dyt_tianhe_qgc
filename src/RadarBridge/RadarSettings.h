@@ -26,6 +26,7 @@ class RadarSettings : public QObject
     Q_PROPERTY(bool    sendPosition   READ sendPosition   WRITE setSendPosition   NOTIFY sendPositionChanged)
     Q_PROPERTY(bool    sendRadarScan  READ sendRadarScan  WRITE setSendRadarScan  NOTIFY sendRadarScanChanged)
     Q_PROPERTY(int     sendRateHz     READ sendRateHz     WRITE setSendRateHz     NOTIFY sendRateHzChanged)
+    Q_PROPERTY(int     targetId       READ targetId       WRITE setTargetId       NOTIFY targetIdChanged)
 
 public:
     explicit RadarSettings(QObject *parent = nullptr);
@@ -36,6 +37,7 @@ public:
     bool    sendPosition()   const { return _sendPosition; }
     bool    sendRadarScan()  const { return _sendRadarScan; }
     int     sendRateHz()     const { return _sendRateHz; }
+    int     targetId()       const { return _targetId; }
 
     void setEnabled(bool v);
     void setSerialPortName(const QString &v);
@@ -43,6 +45,7 @@ public:
     void setSendPosition(bool v);
     void setSendRadarScan(bool v);
     void setSendRateHz(int v);
+    void setTargetId(int v);
 
 signals:
     void enabledChanged();
@@ -51,6 +54,7 @@ signals:
     void sendPositionChanged();
     void sendRadarScanChanged();
     void sendRateHzChanged();
+    void targetIdChanged();
 
 private:
     void _load();
@@ -62,4 +66,5 @@ private:
     bool    _sendPosition   = true;
     bool    _sendRadarScan  = true;
     int     _sendRateHz     = 10;
+    int     _targetId       = 1;
 };

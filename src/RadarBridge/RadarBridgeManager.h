@@ -41,6 +41,7 @@ class RadarBridgeManager : public QObject
     Q_PROPERTY(bool        sendPosition   READ sendPosition   WRITE setSendPosition   NOTIFY sendPositionChanged)
     Q_PROPERTY(bool        sendRadarScan  READ sendRadarScan  WRITE setSendRadarScan  NOTIFY sendRadarScanChanged)
     Q_PROPERTY(int         sendRateHz     READ sendRateHz     WRITE setSendRateHz     NOTIFY sendRateHzChanged)
+    Q_PROPERTY(int         targetId       READ targetId       WRITE setTargetId       NOTIFY targetIdChanged)
 
     // Master gate for forwarding to the flight controller. When false, frames
     // are still parsed/decoded (stats + last-sample update) but NOTHING is sent
@@ -96,6 +97,7 @@ public:
     bool        sendPosition()   const;
     bool        sendRadarScan()  const;
     int         sendRateHz()     const;
+    int         targetId()       const;
     bool        sendingEnabled() const { return _sendingEnabled; }
 
     bool        connected()      const { return _connected; }
@@ -127,6 +129,7 @@ public:
     void setSendPosition(bool v);
     void setSendRadarScan(bool v);
     void setSendRateHz(int v);
+    void setTargetId(int v);
     void setSendingEnabled(bool v);
 
     // QML convenience toggles for the on/off button.
@@ -140,6 +143,7 @@ signals:
     void sendPositionChanged();
     void sendRadarScanChanged();
     void sendRateHzChanged();
+    void targetIdChanged();
     void sendingEnabledChanged();
     void connectedChanged();
     void statusTextChanged();

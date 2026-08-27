@@ -91,6 +91,7 @@ void RadarBridgeManager::init()
     connect(_settings, &RadarSettings::sendPositionChanged,   this, &RadarBridgeManager::sendPositionChanged);
     connect(_settings, &RadarSettings::sendRadarScanChanged,  this, &RadarBridgeManager::sendRadarScanChanged);
     connect(_settings, &RadarSettings::sendRateHzChanged,     this, &RadarBridgeManager::sendRateHzChanged);
+    connect(_settings, &RadarSettings::targetIdChanged,       this, &RadarBridgeManager::targetIdChanged);
 
     // --- Timers ---
     connect(_reconnectTimer, &QTimer::timeout, this, &RadarBridgeManager::_onReconnectTimer);
@@ -116,6 +117,7 @@ int     RadarBridgeManager::baudRate()       const { return _settings ? _setting
 bool    RadarBridgeManager::sendPosition()   const { return _settings && _settings->sendPosition(); }
 bool    RadarBridgeManager::sendRadarScan()  const { return _settings && _settings->sendRadarScan(); }
 int     RadarBridgeManager::sendRateHz()     const { return _settings ? _settings->sendRateHz() : 10; }
+int     RadarBridgeManager::targetId()       const { return _settings ? _settings->targetId() : 1; }
 
 void RadarBridgeManager::setEnabled(bool v)
 {
@@ -143,6 +145,7 @@ void RadarBridgeManager::setBaudRate(int v)                  { if (_settings) _s
 void RadarBridgeManager::setSendPosition(bool v)            { if (_settings) _settings->setSendPosition(v); }
 void RadarBridgeManager::setSendRadarScan(bool v)          { if (_settings) _settings->setSendRadarScan(v); }
 void RadarBridgeManager::setSendRateHz(int v)              { if (_settings) _settings->setSendRateHz(v); }
+void RadarBridgeManager::setTargetId(int v)                { if (_settings) _settings->setTargetId(v); }
 
 // ---------------------------------------------------------------------------
 // Statistics proxies
@@ -316,7 +319,7 @@ void RadarBridgeManager::_handlePosition(const QByteArray &payload, const QByteA
 
     // Master gate + per-type toggle + rate limit before forwarding to PX4.
     if (_sendingEnabled && sendPosition() && _rateAllows(_lastPositionSentMs)) {
-        _bridge->sendPositionAsGpsInput(pos);
+        _bridge->sendPositionAsUavInfo(pos, static_cast<quint32>(targetId()));
         // Optional map display copy (see header note about GLOBAL_POSITION_INT):
         // _bridge->sendPositionAsGlobalPositionInt(pos);
     }

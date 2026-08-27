@@ -7,7 +7,7 @@
  * connection to the flight controller: it reuses the active Vehicle and its
  * primary LinkInterface, exactly like RTCMMavlink / MissionManager do.
  *
- *   POSITION       -> GPS_INPUT        (primary; can also emit GLOBAL_POSITION_INT)
+ *   POSITION       -> UAV_INFO         (radar target for cooperative_rendezvous)
  *   RADAR_SCAN_2D  -> OBSTACLE_DISTANCE (72-point array, downsample/pad as needed)
  *
  ****************************************************************************/
@@ -27,9 +27,9 @@ class RadarMavlinkBridge : public QObject
 public:
     explicit RadarMavlinkBridge(QObject *parent = nullptr);
 
-    /// Send a POSITION as a MAVLink GPS_INPUT message to the active vehicle.
+    /// Send a POSITION as a MAVLink UAV_INFO radar-target message to the active vehicle.
     /// @return true if a message was actually sent.
-    bool sendPositionAsGpsInput(const RadarProtocol::PositionData &pos);
+    bool sendPositionAsUavInfo(const RadarProtocol::PositionData &pos, quint32 targetId);
 
     /// Optional: also send the position as GLOBAL_POSITION_INT so it shows up
     /// on the QGC map. NOTE: GLOBAL_POSITION_INT conventionally represents the
